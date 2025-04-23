@@ -1,0 +1,14 @@
+servo_controller:
+  ros__parameters:
+    port: /dev/usb_robot_arm      # 串口裝置檔
+    baud: 115200                  # 波特率
+    speed: 150                    # 全域速度參數 (0~1000)
+
+    # 每個軸的設定：id, 最小角度, 最大角度 (單位：度)
+    servo_configs:
+      - id: 1
+        min: 0.0
+        max: 240.0
+      - id: 2
+        min: 0.0
+        max:  240.0
