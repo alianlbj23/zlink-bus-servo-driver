@@ -9,13 +9,6 @@ echo "Detected OS: $OS, Architecture: $ARCH"
 # 設定適當的 Docker 參數
 device_options=""
 
-# 檢查設備並加入 --device 參數
-if [ -e /dev/usb_front_wheel ]; then
-    device_options+=" --device=/dev/usb_front_wheel"
-fi
-if [ -e /dev/usb_rear_wheel ]; then
-    device_options+=" --device=/dev/usb_rear_wheel"
-fi
 if [ -e /dev/usb_robot_arm ]; then
     device_options+=" --device=/dev/usb_robot_arm"
 fi
