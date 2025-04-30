@@ -24,9 +24,10 @@ fi
 DOCKER_RUN_ARGS+=( "${VOLUME_ARGS[@]}" )
 
 # 5. 添加映像名稱和要執行的命令
+#   修改這裡：執行完命令後，使用 ; bash 保持交互式會話
 DOCKER_RUN_ARGS+=(
     "ghcr.io/screamlab/pros_car_docker_image:latest"
-    "/bin/bash"
+    "bash" "-c" "colcon build && . ./install/setup.bash && ros2 run bus_servo_pkg bus_servo_node ; bash"
 )
 
 # (可選) 打印最終執行的命令，方便調試
