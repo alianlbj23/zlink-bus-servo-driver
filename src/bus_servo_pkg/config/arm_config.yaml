@@ -12,3 +12,6 @@ servo_controller:
       - id: 2
         min: 0.0
         max:  240.0
+      - id: 3
+        min: 60.0
+        max:  100.0
