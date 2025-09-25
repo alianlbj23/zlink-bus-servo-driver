@@ -5,6 +5,7 @@ import serial
 import time
 import sys
 import os
+from lewansoul_lx16a import ServoController
 
 # Non-blocking keyboard reading (Linux/macOS terminal)
 if os.name != "nt":
@@ -37,6 +38,7 @@ class BusServo:
 
     def __init__(self, port="/dev/ttyUSB0", baudrate=115200, timeout=0.2):
         self.ser = serial.Serial(port, baudrate=baudrate, timeout=timeout)
+        self.controller = ServoController(self.ser)
 
     def _query(self, sid, cmd, expect_len):
         self.ser.reset_input_buffer()
@@ -58,13 +60,26 @@ class BusServo:
             return vin / 1000.0
         return None
 
+    def read_position(self, sid):
+        """Use lewansoul_lx16a library to read servo position in degrees (0-360)"""
+        try:
+            raw_pos = self.controller.get_position(sid)
+            if raw_pos is not None:
+                # Convert from raw position (0-1000) to degrees (0-240)
+                # Then map to 0-360 range if needed
+                angle = (raw_pos / 1000.0) * 240.0
+                return angle
+            return None
+        except Exception:
+            return None
+
 
 if __name__ == "__main__":
     LAST_ID = 3
     PORT = "/dev/usb_robot_arm"
 
     servo = BusServo(PORT, 115200)
-    times, temps, volts = [], [], []
+    times, temps, volts, angles = [], [], [], []
     t0 = time.time()
 
     print("Starting monitoring, press 'q' or Ctrl+C to exit and generate charts")
@@ -79,13 +94,15 @@ if __name__ == "__main__":
             now = time.time() - t0
             temp = servo.read_temperature(LAST_ID)
             vin  = servo.read_voltage(LAST_ID)
+            angle = servo.read_position(LAST_ID)
 
             times.append(now)
             temps.append(temp if temp is not None else float("nan"))
             volts.append(vin if vin is not None else float("nan"))
+            angles.append(angle if angle is not None else float("nan"))
 
-            if temp is not None and vin is not None:
-                print(f"Servo {LAST_ID}: {temp} °C, {vin:.2f} V")
+            if temp is not None and vin is not None and angle is not None:
+                print(f"Servo {LAST_ID}: {temp} °C, {vin:.2f} V, {angle:.1f}°")
             else:
                 print(f"Servo {LAST_ID}: [Read failed]")
 
@@ -133,6 +150,20 @@ if __name__ == "__main__":
         filename2 = f"servo_{LAST_ID}_voltage_{timestamp}.png"
         plt.savefig(filename2, dpi=300, bbox_inches='tight')
         print(f"Voltage chart saved as: {filename2}")
+        plt.close()
+        
+        # Third chart: Time vs Angle
+        fig3, ax3 = plt.subplots(figsize=(10, 6))
+        ax3.plot(times, angles, "g-", linewidth=2, marker='^', markersize=3)
+        ax3.set_xlabel("Time (s)")
+        ax3.set_ylabel("Angle (degrees)")
+        ax3.grid(True, linestyle="--", alpha=0.5)
+        ax3.set_title(f"Servo {LAST_ID} Angle vs Time")
+        fig3.tight_layout()
+        
+        filename3 = f"servo_{LAST_ID}_angle_{timestamp}.png"
+        plt.savefig(filename3, dpi=300, bbox_inches='tight')
+        print(f"Angle chart saved as: {filename3}")
         plt.close()
         
     except ImportError:
