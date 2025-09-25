@@ -6,7 +6,7 @@ import time
 import sys
 import os
 
-# 非阻塞讀鍵盤 (Linux/macOS 終端機)
+# Non-blocking keyboard reading (Linux/macOS terminal)
 if os.name != "nt":
     import termios, tty, select
 
@@ -67,7 +67,7 @@ if __name__ == "__main__":
     times, temps, volts = [], [], []
     t0 = time.time()
 
-    print("開始監看，按 q 或 Ctrl+C 結束並顯示圖表")
+    print("Starting monitoring, press 'q' or Ctrl+C to exit and generate charts")
 
     old_settings = None
     if os.name != "nt":
@@ -87,7 +87,7 @@ if __name__ == "__main__":
             if temp is not None and vin is not None:
                 print(f"Servo {LAST_ID}: {temp} °C, {vin:.2f} V")
             else:
-                print(f"Servo {LAST_ID}: [讀取失敗]")
+                print(f"Servo {LAST_ID}: [Read failed]")
 
             ch = getch_nonblock()
             if ch is not None and ch.lower() == "q":
@@ -101,13 +101,13 @@ if __name__ == "__main__":
         if os.name != "nt" and old_settings is not None:
             termios.tcsetattr(sys.stdin, termios.TCSADRAIN, old_settings)
 
-    # ===== 退出後畫圖 =====
+    # ===== Generate charts after exit =====
     try:
         import matplotlib.pyplot as plt
         
         timestamp = time.strftime('%Y%m%d_%H%M%S')
         
-        # 第一張圖：時間 vs 溫度
+        # First chart: Time vs Temperature
         fig1, ax1 = plt.subplots(figsize=(10, 6))
         ax1.plot(times, temps, "r-", linewidth=2, marker='o', markersize=3)
         ax1.set_xlabel("Time (s)")
@@ -118,10 +118,10 @@ if __name__ == "__main__":
         
         filename1 = f"servo_{LAST_ID}_temperature_{timestamp}.png"
         plt.savefig(filename1, dpi=300, bbox_inches='tight')
-        print(f"溫度圖表已儲存為: {filename1}")
+        print(f"Temperature chart saved as: {filename1}")
         plt.close()
         
-        # 第二張圖：時間 vs 電壓
+        # Second chart: Time vs Voltage
         fig2, ax2 = plt.subplots(figsize=(10, 6))
         ax2.plot(times, volts, "b-", linewidth=2, marker='s', markersize=3)
         ax2.set_xlabel("Time (s)")
@@ -132,8 +132,8 @@ if __name__ == "__main__":
         
         filename2 = f"servo_{LAST_ID}_voltage_{timestamp}.png"
         plt.savefig(filename2, dpi=300, bbox_inches='tight')
-        print(f"電壓圖表已儲存為: {filename2}")
+        print(f"Voltage chart saved as: {filename2}")
         plt.close()
         
     except ImportError:
-        print("請先安裝 matplotlib: pip install matplotlib")
+        print("Please install matplotlib first: pip install matplotlib")
