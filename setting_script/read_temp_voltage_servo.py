@@ -1,48 +1,56 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
 import serial
 import time
 
 def checksum(data):
-    return (~sum(data) & 0xFF)
+    return (~sum(data) & 0xFF) & 0xFF
+
+def make_cmd(sid, cmd):
+    pkt = [0x55, 0x55, 0x03, sid, cmd]
+    pkt.append(checksum(pkt[2:]))
+    return bytes(pkt)
 
 class BusServo:
+    CMD_TEMP_READ = 0x1A
+    CMD_VIN_READ  = 0x1B
+
     def __init__(self, port="/dev/ttyUSB0", baudrate=115200):
-        self.ser = serial.Serial(port, baudrate, timeout=0.5)
+        self.ser = serial.Serial(port, baudrate=baudrate, timeout=0.2)
+
+    def _query(self, sid, cmd, expect_len):
+        self.ser.reset_input_buffer()
+        self.ser.write(make_cmd(sid, cmd))
+        time.sleep(0.02)
+        resp = self.ser.read(expect_len)
+        return resp if len(resp) >= expect_len else None
 
     def read_temperature(self, sid):
-        # CMD: SERVO_TEMP_READ = 0x1A
-        packet = [0x55, 0x55, 0x03, sid, 0x1A]
-        packet.append(checksum(packet[2:]))
-        self.ser.write(bytes(packet))
-        resp = self.ser.read(7)
-        if len(resp) >= 7:
-            return resp[5]  # °C
+        resp = self._query(sid, self.CMD_TEMP_READ, 7)
+        if resp:
+            return resp[5]
         return None
 
     def read_voltage(self, sid):
-        # CMD: SERVO_VIN_READ = 0x1B
-        packet = [0x55, 0x55, 0x03, sid, 0x1B]
-        packet.append(checksum(packet[2:]))
-        self.ser.write(bytes(packet))
-        resp = self.ser.read(8)
-        if len(resp) >= 8:
-            vin = resp[5] | (resp[6] << 8)  # mV
-            return vin / 1000.0
+        resp = self._query(sid, self.CMD_VIN_READ, 8)
+        if resp:
+            vin = resp[5] | (resp[6] << 8)
+            return vin / 1000.0  # V
         return None
 
 
 if __name__ == "__main__":
-    servo = BusServo("/dev/usb_robot_arm")  # 換成你的串口
-    servo_ids = [1, 2, 3, 4]          # 這裡填上實際有的伺服 ID
+    LAST_ID = 3   # 這裡換成最後一顆馬達的 ID
+    servo = BusServo("/dev/usb_robot_arm", 115200)
 
     while True:
-        print("==== Servo Status ====")
-        for sid in servo_ids:
-            temp = servo.read_temperature(sid)
-            vin = servo.read_voltage(sid)
+        temp = servo.read_temperature(LAST_ID)
+        vin  = servo.read_voltage(LAST_ID)
 
-            if temp is not None and vin is not None:
-                print(f"ID {sid}: {temp} °C, {vin:.2f} V")
-            else:
-                print(f"ID {sid}: [讀取失敗]")
-        print()
+        if temp is not None and vin is not None:
+            print(f"Servo {LAST_ID}: {temp} °C, {vin:.2f} V")
+        else:
+            print(f"Servo {LAST_ID}: [讀取失敗]")
+
         time.sleep(1)  # 每秒更新一次
