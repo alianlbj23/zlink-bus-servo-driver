@@ -61,17 +61,35 @@ class BusServo:
         return None
 
     def read_position(self, sid):
-        """Use lewansoul_lx16a library to read servo position in degrees (0-360)"""
+        """Read servo position in degrees (0-360)"""
         try:
+            # Use lewansoul_lx16a library to get position
             raw_pos = self.controller.get_position(sid)
             if raw_pos is not None:
-                # Convert from raw position (0-1000) to degrees (0-240)
-                # Then map to 0-360 range if needed
-                angle = (raw_pos / 1000.0) * 240.0
+                # LX-16A servo: raw position 0-1000 maps to 0-240 degrees
+                # Convert to 0-240 degree range first
+                angle_240 = (raw_pos / 1000.0) * 240.0
+                
+                # Map 0-240 to 0-360 if you want full circle range
+                # Or keep 0-240 if that's the actual servo range
+                angle = angle_240  # Keep original 0-240 range
+                
                 return angle
             return None
-        except Exception:
-            return None
+        except Exception as e:
+            # Fallback to manual position reading if library fails
+            return self._read_position_manual(sid)
+    
+    def _read_position_manual(self, sid):
+        """Manual position reading using direct serial commands"""
+        resp = self._query(sid, 0x02, 8)  # CMD_POS_READ = 0x02
+        if resp and len(resp) >= 8:
+            # Position is in bytes 6 and 7 (low byte first)
+            pos = resp[6] | (resp[7] << 8)
+            # Convert from 0-1000 range to 0-240 degrees
+            angle = (pos / 1000.0) * 240.0
+            return angle
+        return None
 
 
 if __name__ == "__main__":
